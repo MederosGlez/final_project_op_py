@@ -8,6 +8,7 @@
 [x]y=f(x) 2D
 [x]y=f(x,t) 2D Gif
 [x]z=f(x,y) 3D
-[]z=f{x,y,t} 3D Gif
-[]hacer las graficas 2D en polares
+[x]z=f{x,y,t} 3D Gif
+[x]hacer las graficas 2D en polares
 []arreglar las indeterminaciones D: 
+[]invitar a Maia a salir :O
