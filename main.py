@@ -48,7 +48,7 @@ def process_line(line):
 if __name__ == "__main__":
     lines = [
         "/load input.txt",
-        "/gen f",
+        "/gen h",
     ]
     print('aguacate')
     handle_config("5")
