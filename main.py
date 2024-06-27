@@ -46,9 +46,9 @@ def process_line(line):
 if __name__ == "__main__":
     lines = [
         "/load input.txt",
-        "/gen g"
+        # "/gen f",
+        "3-2"
     ]
-    # "/gen f"
         
     print('aguacate')
     for line in lines:

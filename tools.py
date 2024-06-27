@@ -209,7 +209,7 @@ def handle_list(func_defs):
         return "Aun no hay funciones definidas."
 
 
-rangox = [-6, 6, 0.2]
+rangox = [-10, 10, 0.01]
 rangoy = [0,1,0.1]
 rangoz = [0,1,0.1]
 core = 5
