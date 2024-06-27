@@ -2,7 +2,7 @@
 []arreglar el yunting yard (-)
 []revisar y arreglar el 0/0
 []hacer el config
-[]scatter 
+[]scatter 3d 
 []exit
 []interfaz visual
 [x]y=f(x) 2D

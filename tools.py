@@ -11,6 +11,14 @@ from scipy.interpolate import griddata
 from matplotlib.animation import FuncAnimation, PillowWriter
 from collections import OrderedDict
 
+
+rangox = [-10, 10, 0.01]
+rangoy = [0,1,0.1]
+rangoz = [0,1,0.1]
+core = 5
+condimento = "espacial"
+kind = "scatter"
+
 # Diccionario de operadores con su precedencia, asociatividad y funcion correspondiente
 OPERATORS = {
     '+': (1, 'L', operator.add),
@@ -209,12 +217,6 @@ def handle_list(func_defs):
         return "Aun no hay funciones definidas."
 
 
-rangox = [-10, 10, 0.01]
-rangoy = [0,1,0.1]
-rangoz = [0,1,0.1]
-core = 5
-pimienta = "paprica"
-
 def _handle_gen(args):
     func_name = args[0]
     print(args)
@@ -226,6 +228,16 @@ def _handle_gen(args):
     func_desciption = func_defs[func_name]
 
     return evaluate_function(func_desciption, args)
+
+
+def handle_config(line):
+    global kind 
+    kind = "plot"
+    # line = line.strip(line)
+    # fulano = line.split(line,",")
+    # for i in fulano:
+    #     pass
+    # pass
 
 
 def save_database():
@@ -268,13 +280,16 @@ def handle_gen(func, *args):
                     for param_1 in params_1
                 ]
             )
-        print("debug",result)
         result = list(zip(params_1, result))
-        print("debug",result)
         fig, ax = plt.subplots()
         np_result = np.array(result)
         # Plot some data on the Axes.
-        ax.plot(np_result[:, 0], np_result[:, 1])
+        if kind == "plot":
+            ax.plot(np_result[:, 0], np_result[:, 1])
+        elif kind == "scatter":
+            ax.scatter(np_result[:, 0], np_result[:, 1])
+        else:
+            print("Introduce una opcion correcta")
         plt.show()
     elif len(args) == 2:
         x , y = params
@@ -295,7 +310,7 @@ def handle_gen(func, *args):
         x = [u[0] for u in params_1]
         y = [u[1] for u in params_1]
         z = result
-        if pimienta == "comino":
+        if condimento == "espacial":
             xi = np.linspace(min(x), max(x), 100)
             yi = np.linspace(min(y), max(y), 100)
             xi, yi = np.meshgrid(xi, yi)
@@ -307,7 +322,7 @@ def handle_gen(func, *args):
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
             plt.show()
-        elif pimienta == "paprica":
+        elif condimento == "temporal":
             y,x,t=z,x,y 
             
             mapa = OrderedDict()
@@ -327,7 +342,12 @@ def handle_gen(func, *args):
                 ax.clear()
                 datox=[i[0] for i in datos[frame]]
                 datoy=[i[1] for i in datos[frame]]
-                ax.scatter(datox, datoy)
+                if kind == "plot":
+                    ax.plot(datox, datoy)
+                elif kind == "scatter":
+                    ax.scatter(datox, datoy)
+                else:
+                    print("Introduce una opcion correcta")
                 ax.set_xlim(min(x), max(x))
                 ax.set_ylim(min(y), max(y))
                 ax.set_xlabel('X')

@@ -1,9 +1,10 @@
 
 import multiprocessing
-from tools import handle_define, handle_evaluate, handle_gen
+from tools import handle_define, handle_evaluate, handle_gen, handle_config
 import matplotlib.pyplot as plt
 import numpy as np
 from multiprocessing import Pool
+
 
 
 def handle_load(path, *args):
@@ -19,7 +20,8 @@ def handle_load(path, *args):
 
 buildin_functions = {
     "gen": handle_gen,
-    "load": handle_load
+    "load": handle_load,
+    "config": handle_config
 }
 
 
@@ -46,11 +48,11 @@ def process_line(line):
 if __name__ == "__main__":
     lines = [
         "/load input.txt",
-        # "/gen f",
+        "/gen f",
         "3-2"
     ]
-        
     print('aguacate')
+    handle_config("5")
     for line in lines:
         try:
             process_line(line)
