@@ -12,12 +12,13 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from collections import OrderedDict
 
 
-rangox = [-10, 10, 0.01]
-rangoy = [0,1,0.1]
+rangox = [0, np.pi, 0.01]
+rangoy = [0,2* np.pi, 0.1]
 rangoz = [0,1,0.1]
 core = 5
-condimento = "espacial"
+condimento = "temporal"
 kind = "scatter"
+polar = True
 
 # Diccionario de operadores con su precedencia, asociatividad y funcion correspondiente
 OPERATORS = {
@@ -219,10 +220,8 @@ def handle_list(func_defs):
 
 def _handle_gen(args):
     func_name = args[0]
-    print(args)
     args = args[1]
-    print('debug: ',args)
-    print(f"Generando grafico de {func_name} con parametros {args}")
+    #print(f"Generando grafico de {func_name} con parametros {args}")
     load_database()
 
     func_desciption = func_defs[func_name]
@@ -280,14 +279,17 @@ def handle_gen(func, *args):
                     for param_1 in params_1
                 ]
             )
+        print("debug",result)
+        x,y=np.array(params_1), np.array(result)
+        if(polar):
+            x,y=y*np.cos(x),y*np.sin(x)
         result = list(zip(params_1, result))
         fig, ax = plt.subplots()
-        np_result = np.array(result)
         # Plot some data on the Axes.
         if kind == "plot":
-            ax.plot(np_result[:, 0], np_result[:, 1])
+            ax.plot(x, y)
         elif kind == "scatter":
-            ax.scatter(np_result[:, 0], np_result[:, 1])
+            ax.scatter(x, y)
         else:
             print("Introduce una opcion correcta")
         plt.show()
@@ -324,7 +326,9 @@ def handle_gen(func, *args):
             plt.show()
         elif condimento == "temporal":
             y,x,t=z,x,y 
-            
+            x,y=np.array(x), np.array(y)
+            if(polar):
+                x,y=y*np.cos(x),y*np.sin(x)
             mapa = OrderedDict()
             # Iterar sobre los datos x, y, t
             for _x, _y, _t in zip(x, y, t):
@@ -356,8 +360,69 @@ def handle_gen(func, *args):
             fig, ax = plt.subplots()
             print("llegue")
             ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
-            # ani.save('animation.gif', writer=PillowWriter(fps=20))
+            ani.save('animation.gif', writer=PillowWriter(fps=20))
             plt.show()
+    elif len(args)==3:
+        x , y, z = params
+        params_1=[]
+        for i in x:
+            for j in y:
+                for k in z:
+                    params_1.append([i,j,k])
+        result = []
+        with Pool(core) as p:
+            result = p.map(
+                _handle_gen,
+                [
+                    (func, param_1)
+                    for param_1 in params_1
+                ]
+            )
+        x = [u[0] for u in params_1]
+        y = [u[1] for u in params_1]
+        z = [u[2] for u in params_1]
+        _z = result
+        z,y,x,t=_z,y,x,z 
+        
+        mapa = OrderedDict()
+        # Iterar sobre los datos x, y, t
+        for _x, _y, _z , _t in zip(x, y, z, t):
+            if _t not in mapa:
+                mapa[_t] = []  # Inicializar la lista para este tiempo si no existe
+            mapa[_t].append([_x, _y, _z])  # Agregar el par de coordenadas
+
+        datos = []
+        for i in mapa.values():
+            datos.append(i)
+        # Mostrar el resultado
+        print('llegue aqui :)')
+        print(datos[0])
+        print(len(result))
+        def update(frame):
+            ax.clear()
+            datox=[i[0] for i in datos[frame]]
+            datoy=[i[1] for i in datos[frame]]
+            datoz=[i[2] for i in datos[frame]]
+            xi = np.linspace(min(x), max(x), 100)
+            yi = np.linspace(min(y), max(y), 100)
+            xi, yi = np.meshgrid(xi, yi)
+            zi = griddata((datox, datoy), datoz, (xi, yi), method='cubic')
+            ax.plot_surface(xi, yi, zi, cmap='viridis')
+            ax.set_xlim(min(x), max(x))
+            ax.set_ylim(min(y), max(y))
+            ax.set_zlim(min(z), max(z))
+            ax.set_xlabel('X')
+            ax.set_ylabel('Y')
+            ax.set_zlabel('Z')
+            ax.set_title(f'Time: {frame:.2f}')
+            plt.show()
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
+        # ani.save('animation.gif', writer=PillowWriter(fps=20))
+        plt.show()
+    else:
+        print('Demasiados argumentos para graficar D:')
 
 def test__handle_gen():
     _handle_gen('f', 1)
