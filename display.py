@@ -1,86 +1,85 @@
 import streamlit as st
-import pickle
 
-def get_settings():
+import multiprocessing
+import re
+from tools import handle_define, handle_evaluate, handle_gen
+import matplotlib.pyplot as plt
+import numpy as np
+from multiprocessing import Pool
+import os
 
-    # Get core (integer only)
-    core = st.number_input("Enter an integer value for core", value=1, step=1)
 
-    # Get type (spatial or temporal)
-    type_choice = st.selectbox("Select type", ["spatial", "temporal"])
+def handle_load(path, *args):
+    print(path)
+    with open(file=path) as file:
+        for ix, line in enumerate(file.readlines()):
+            if "=" in line:
+                handle_define(line)
+            else:
+                result = handle_evaluate(line)
+                print(f'line{ix}:{result}')
 
-    # Get kind (plot or scatter)
-    kind_choice = st.selectbox("Select kind", ["plot", "scatter"])
 
-    # Get polar (yes or no)
-    polar_choice = st.radio("Select polar", ["yes", "no"])
+buildin_functions = {
+    "gen": handle_gen,
+    "load": handle_load
+}
 
-    # Get dimension (2D, 2D+T, 3D, 3D+T)
-    dimension_choice = st.selectbox("Select dimension", ["2D", "2D+T", "3D", "3D+T"])
 
-    x_range_begin = st.number_input("Enter the beginning value for x_range", value=0.0)
-    x_range_finish = st.number_input("Enter the ending value for x_range", value=10.0)
-    x_range_step = st.number_input("Enter the step value for x_range", value=1.0)
+def handle_buildin_function(tokens):
+    buildin_function = tokens[0]
+    assert buildin_function in buildin_functions, "no conozco esta funcion"
+    fun = buildin_functions[buildin_function]
+    result = fun(*tokens[1:])
+    return result
 
-    # Get y_range (optional)
-    y_range_begin = st.number_input("Enter the beginning value for y_range (optional)", value=0.0)
-    y_range_finish = st.number_input("Enter the ending value for y_range (optional)", value=10.0)
-    y_range_step = st.number_input("Enter the step value for y_range (optional)", value=1.0)
 
-    # Get z_range (optional)
-    z_range_begin = st.number_input("Enter the beginning value for z_range (optional)", value=0.0)
-    z_range_finish = st.number_input("Enter the ending value for z_range (optional)", value=10.0)
-    z_range_step = st.number_input("Enter the step value for z_range (optional)", value=1.0)
+def process_line(line):
+    if line.startswith("/"):
+        tokens = line[1:].split(" ")
+        handle_buildin_function(tokens)
+        print("voy a ejecutar uno de los comandos reservados")
 
-    # Get t_range (optional)
-    #t_range_begin = st.number_input("Enter the beginning value for t_range (optional)", value=0.0)
-    #t_range_finish = st.number_input("Enter the ending value for t_range (optional)", value=10.0)
-    #t_range_step = st.number_input("Enter the step value for t_range (optional)", value=1.0)
+    elif "=" in line:
+        handle_define(line)
+    else:
+        return handle_evaluate(line)
 
-    settings = {
-        'x_range': {
-            'begin': x_range_begin,
-            'finish': x_range_finish,
-            'step': x_range_step
-        },
-        'y_range': {
-            'begin': y_range_begin,
-            'finish': y_range_finish,
-            'step': y_range_step
-        },
-        'z_range': {
-            'begin': z_range_begin,
-            'finish': z_range_finish,
-            'step': z_range_step
-        },
+def display():
+    st.title("Funtions app(Maia soy malo con los nombres, te toca arreglar todo esto)")
+    def new_line():
+        st.session_state.submitted_texts.append(text_input)
+    # Inicializar la lista de textos enviados si no existe en session_state
+    if 'submitted_texts' not in st.session_state:
+        st.session_state.submitted_texts = []
 
-        #'t_range': {
-            #'begin': t_range_begin,
-            #'finish': t_range_finish,
-            #'step': t_range_step
-        #},
+    # Mostrar todas las líneas enviadas
+    if st.session_state.submitted_texts:
+        st.subheader("Submitted Lines")
+        all_texts = "\n".join(st.session_state.submitted_texts)
+        st.code(all_texts, language="")
 
-        'core': int(core),
-        'consal': type_choice,
-        'kind': kind_choice,
-        'polar': polar_choice,
-        'dimension': dimension_choice
-    }
+    # Área de texto de una sola línea para escribir la línea
+    text_input = st.text_input("Write your command here")
 
-    return settings
+    # Botón para enviar el texto
+    if st.button("Submit", on_click=new_line,):
+        if text_input:
+            try:
+                tmp=process_line(text_input)
+                if tmp != None:
+                    st.success(tmp)
+                else:
+                    st.success("Text submitted successfully!")
+            except AssertionError as err:
+                st.warning(err)
+        else:
+            st.warning("Please write something before submitting.")
+    if os.path.exists('figure.png'):
+        # Si el archivo existe, eliminarlo
+        st.image("figure.png", use_column_width=True)
+    if os.path.exists('figure.gif'):
+        # Si el archivo existe, eliminarlo
+        st.image("figure.gif", use_column_width=True)
+    
 
-def main():
-    st.title("User Settings")
-    user_settings = get_settings()
-    st.write("User settings:")
-    for key, value in user_settings.items():
-        st.write(f"{key}: {value}")
-
-    # Save settings when the user clicks the button
-    if st.button("Save Settings"):
-        with open('user_settings.pkl', 'wb') as f:
-            pickle.dump(user_settings, f)
-        st.success("Settings saved successfully!")
-
-if __name__ == "__main__":
-    main()

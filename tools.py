@@ -16,7 +16,7 @@ rango_x = [0, np.pi, 0.05]
 rango_y = [0, np.pi, 0.05]
 rango_z = [0,1,0.1]
 core = 5
-condimento = "espacial"
+condimento = "spatial"
 kind = "plot"
 polar = False
 
@@ -229,7 +229,7 @@ def _handle_gen(args):
     return evaluate_function(func_desciption, args)
 
 
-def handle_config(line):
+def handle_config():
 
     with open(f'user_settings.pkl', mode='rb') as f:
         settings = pickle.load(f)
@@ -261,13 +261,19 @@ def load_database():
     with open(f'.save_functions.txt', mode='rb') as f:
         func_defs = pickle.load(f)
 
-
+import os
 def handle_gen(func, *args):
+    if os.path.exists('figure.png'):
+        # Si el archivo existe, eliminarlo
+        os.remove('figure.png')
+    if os.path.exists('figure.gif'):
+        # Si el archivo existe, eliminarlo
+        os.remove('figure.gif')
     save_database()
 
     (args, _) = func_defs[func]
     params = []
-    rangos = [rango_x,rango_y, rangoz]
+    rangos = [rango_x,rango_y, rango_z]
     for i in range(len(args)):
         params.append(
             list(
@@ -278,7 +284,6 @@ def handle_gen(func, *args):
                 )
             )
         )
-    print(params)
     if len(args) == 1:
         params_1 = params[0]
 
@@ -291,7 +296,6 @@ def handle_gen(func, *args):
                     for param_1 in params_1
                 ]
             )
-        print("debug",result)
         x,y=np.array(params_1), np.array(result)
         if(polar):
             x,y=y*np.cos(x),y*np.sin(x)
@@ -304,15 +308,17 @@ def handle_gen(func, *args):
             ax.scatter(x, y)
         else:
             print("Introduce una opcion correcta")
+        fig.savefig("figure.png")
+        print("guarde el grafico correctamente")
         plt.show()
     elif len(args) == 2:
+        print('LLegue')
         x , y = params
         params_1=[]
         for i in x:
             for j in y:
                 params_1.append([i,j])
         result = []
-        print(params_1)
         with Pool(core) as p:
             result = p.map(
                 _handle_gen,
@@ -325,6 +331,7 @@ def handle_gen(func, *args):
         y = [u[1] for u in params_1]
         z = result
         if condimento == "spatial":
+            print("spatial")
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             if kind == "plot":
@@ -340,8 +347,11 @@ def handle_gen(func, *args):
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
+            fig.savefig("figure.png")
+            print("guarde el grafico correctamente")
             plt.show()
         elif condimento == "temporal":
+            print("temporal")
             y,x,t=z,x,y 
             x,y=np.array(x), np.array(y)
             if(polar):
@@ -358,7 +368,6 @@ def handle_gen(func, *args):
                 datos.append(i)
             # Mostrar el resultado
             
-            print(datos[0])
             def update(frame):
                 ax.clear()
                 datox=[i[0] for i in datos[frame]]
@@ -375,9 +384,9 @@ def handle_gen(func, *args):
                 ax.set_ylabel('Y')
                 ax.set_title(f'Time: {frame:.2f}')
             fig, ax = plt.subplots()
-            print("llegue")
             ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
-            ani.save('animation.gif', writer=PillowWriter(fps=20))
+            ani.save('figure.gif', writer=PillowWriter(fps=20))
+            print('guarde la animacion correctamente')
             plt.show()
     elif len(args)==3:
         x , y, z = params
@@ -411,10 +420,7 @@ def handle_gen(func, *args):
         datos = []
         for i in mapa.values():
             datos.append(i)
-        # Mostrar el resultado
-        print('llegue aqui :)')
-        print(datos[0])
-        print(len(result))
+        
         def update(frame):
             ax.clear()
             datox=[i[0] for i in datos[frame]]
@@ -441,7 +447,8 @@ def handle_gen(func, *args):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
-        # ani.save('animation.gif', writer=PillowWriter(fps=20))
+        ani.save('figure.gif', writer=PillowWriter(fps=20))
+        print('guarde la animacion correctamente')
         plt.show()
     else:
         print('Demasiados argumentos para graficar D:')
