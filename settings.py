@@ -1,4 +1,4 @@
-import streamlit as st
+import main as st
 import pickle
 from tools import handle_config
 def get_settings():
