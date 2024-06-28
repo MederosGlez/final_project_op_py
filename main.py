@@ -1,5 +1,6 @@
 
 import multiprocessing
+import re
 from tools import handle_define, handle_evaluate, handle_gen, handle_config
 import matplotlib.pyplot as plt
 import numpy as np
@@ -48,14 +49,19 @@ def process_line(line):
 if __name__ == "__main__":
     lines = [
         "/load input.txt",
-        "/gen f",
+        "5+5"
+        "/exit"
+        "/gen h",
     ]
     print('aguacate')
     handle_config("5")
     for line in lines:
-        try:
-            process_line(line)
-        except AssertionError as err:
-            print(err)
+        if re.match("/exit",line):
+            exit()
+        else:
+            try:
+                process_line(line)
+            except AssertionError as err:
+                print(err)
 
     print("el programa finalizo correctamente")

@@ -12,13 +12,13 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from collections import OrderedDict
 
 
-rangox = [0, np.pi, 0.01]
-rangoy = [0,2* np.pi, 0.1]
-rangoz = [0,1,0.1]
+rango_x = [0, np.pi, 0.05]
+rango_y = [0, np.pi, 0.05]
+rango_z = [0,1,0.1]
 core = 5
-condimento = "temporal"
-kind = "scatter"
-polar = True
+condimento = "espacial"
+kind = "plot"
+polar = False
 
 # Diccionario de operadores con su precedencia, asociatividad y funcion correspondiente
 OPERATORS = {
@@ -230,13 +230,25 @@ def _handle_gen(args):
 
 
 def handle_config(line):
-    global kind 
-    kind = "plot"
-    # line = line.strip(line)
-    # fulano = line.split(line,",")
-    # for i in fulano:
-    #     pass
-    # pass
+
+    with open(f'user_settings.pkl', mode='rb') as f:
+        settings = pickle.load(f)
+
+    global rango_x, rango_y, rango_z, kind, core, condimento, polar
+
+    rango_x = [settings["x_range"]["begin"],settings["x_range"]["finish"],settings["x_range"]["step"]]    
+    rango_y = [settings["y_range"]["begin"],settings["y_range"]["finish"],settings["y_range"]["step"]]
+    rango_z = [settings["z_range"]["begin"],settings["z_range"]["finish"],settings["z_range"]["step"]]
+
+    core = settings["core"]
+    condimento = settings["consal"]
+    kind = settings["kind"]
+
+    if settings["polar"] == "yes":
+        polar = True
+    else:
+        polar = False
+
 
 
 def save_database():
@@ -255,7 +267,7 @@ def handle_gen(func, *args):
 
     (args, _) = func_defs[func]
     params = []
-    rangos = [rangox,rangoy, rangoz]
+    rangos = [rango_x,rango_y, rangoz]
     for i in range(len(args)):
         params.append(
             list(
@@ -312,14 +324,19 @@ def handle_gen(func, *args):
         x = [u[0] for u in params_1]
         y = [u[1] for u in params_1]
         z = result
-        if condimento == "espacial":
-            xi = np.linspace(min(x), max(x), 100)
-            yi = np.linspace(min(y), max(y), 100)
-            xi, yi = np.meshgrid(xi, yi)
-            zi = griddata((x, y), z, (xi, yi), method='cubic')
+        if condimento == "spatial":
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
-            ax.plot_surface(xi, yi, zi, cmap='viridis')
+            if kind == "plot":
+                xi = np.linspace(min(x), max(x), 100)
+                yi = np.linspace(min(y), max(y), 100)
+                xi, yi = np.meshgrid(xi, yi)
+                zi = griddata((x, y), z, (xi, yi), method='cubic')
+                ax.plot_surface(xi, yi, zi, cmap='viridis')
+            elif kind == "scatter":
+                ax.scatter(x, y,z)
+            else:
+                print("Introduce una opcion correcta")
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
@@ -403,11 +420,16 @@ def handle_gen(func, *args):
             datox=[i[0] for i in datos[frame]]
             datoy=[i[1] for i in datos[frame]]
             datoz=[i[2] for i in datos[frame]]
-            xi = np.linspace(min(x), max(x), 100)
-            yi = np.linspace(min(y), max(y), 100)
-            xi, yi = np.meshgrid(xi, yi)
-            zi = griddata((datox, datoy), datoz, (xi, yi), method='cubic')
-            ax.plot_surface(xi, yi, zi, cmap='viridis')
+            if kind == "plot":
+                xi = np.linspace(min(x), max(x), 100)
+                yi = np.linspace(min(y), max(y), 100)
+                xi, yi = np.meshgrid(xi, yi)
+                zi = griddata((datox, datoy), datoz, (xi, yi), method='cubic')
+                ax.plot_surface(xi, yi, zi, cmap='viridis')
+            elif kind == "scatter":
+                ax.scatter(datox, datoy,datoz)
+            else:
+                print("Introduce una opcion correcta")
             ax.set_xlim(min(x), max(x))
             ax.set_ylim(min(y), max(y))
             ax.set_zlim(min(z), max(z))
