@@ -1,4 +1,4 @@
-import main as st
+import streamlit as st
 from display import display
 from settings import settings
 

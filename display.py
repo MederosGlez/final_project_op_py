@@ -1,4 +1,4 @@
-import main as st
+import streamlit as st
 
 import multiprocessing
 import re
