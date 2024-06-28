@@ -152,7 +152,7 @@ def evaluate_postfix(postfix, vars):
 
 def pre_process_expression(expression):
     matches = re.finditer(
-        r'(?P<float>-?\d+\.\d+)|(?P<int>-?\d+)|(?P<function_call>\w+\()|(?P<LPAR>\()|(?P<RPAR>\))|(?P<ident>\w+)|(?P<symbol>[+\-*/^])|(?P<args_separator>,)|(?:\s*)',
+        r'(?P<float>\d+\.\d+)|(?P<int>\d+)|(?P<function_call>\w+\()|(?P<LPAR>\()|(?P<RPAR>\))|(?P<ident>\w+)|(?P<symbol>[+\-*/^])|(?P<args_separator>,)|(?:\s*)',
         expression
     )
 

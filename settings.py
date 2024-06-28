@@ -1,6 +1,8 @@
 import streamlit as st
 import pickle
 from tools import handle_config
+
+
 def get_settings():
     # Get core (integer only)
     core = st.number_input("Enter an integer value for core", value=1, step=1)
