@@ -1,3 +1,5 @@
+from constants import *
+
 import streamlit as st
 
 import multiprocessing
@@ -46,7 +48,7 @@ def process_line(line):
         return handle_evaluate(line)
 
 def display():
-    st.title("Funtions app(Maia soy malo con los nombres, te toca arreglar todo esto)")
+    st.title("Project42")
     def new_line():
         st.session_state.submitted_texts.append(text_input)
     # Inicializar la lista de textos enviados si no existe en session_state

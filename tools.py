@@ -1,15 +1,22 @@
-import pickle
-from multiprocessing import Pool
+from constants import *
+from rpn_notation import evaluate_function, evaluate_postfix, shunting_yard
+
+
+import numpy as np
+from matplotlib import pyplot as plt
+import matplotlib.animation
+from scipy.interpolate import griddata
+from mpl_toolkits.mplot3d import Axes3D
+
 import re
 import operator
 import math
 from collections import deque
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import pyplot as plt
-import numpy as np
-from scipy.interpolate import griddata
-from matplotlib.animation import FuncAnimation, PillowWriter
+import os
+
 from collections import OrderedDict
+from multiprocessing import Pool
+import pickle
 
 
 rango_x = [0, np.pi, 0.05]
@@ -20,41 +27,15 @@ condimento = "spatial"
 kind = "plot"
 polar = False
 
-# Diccionario de operadores con su precedencia, asociatividad y funcion correspondiente
-OPERATORS = {
-    '+': (1, 'L', operator.add),
-    '-': (1, 'L', operator.sub),
-    '*': (2, 'L', operator.mul),
-    '/': (2, 'L', operator.truediv),
-    '^': (3, 'R', operator.pow),
-    'neg': (4, 'R', operator.neg)
-}
 
-# Diccionario de funciones matematicas
-FUNCTIONS = {
-    'sin': math.sin,
-    'cos': math.cos,
-    'tan': math.tan,
-    'cot': lambda x: 1 / math.tan(x),
-    'log': math.log,
-    'log10': math.log10,
-    'sqrt': math.sqrt
-}
-
-# Diccionario de constantes matematicas
-CONSTANTS = {
-    'pi': math.pi,
-    'e': math.e
-}
-
-func_defs = {}
+function_name_defs = {}
 
 
-def parse_function_definition(func_def):
+def parse_function_definition(function_name_def):
     match = re.match(
-        r'^\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*=\s*(.+)\s*$', func_def)
+        r'^\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*=\s*(.+)\s*$', function_name_def)
     if not match:
-        raise ValueError("Definicion de funcion invalida")
+        raise ValueError("Definicion de function_nameion invalida")
     name, params, body = match.groups()
     params = [p.strip() for p in params.split(',')] if params else []
 
@@ -62,126 +43,44 @@ def parse_function_definition(func_def):
     idents = {text for t_name, text in tokens if t_name == 'ident'}
 
     undefined = idents - set(params) - set(OPERATORS) - \
-        set(FUNCTIONS) - set(CONSTANTS)
+        set(BUILD_IN_FUNCTIONS) - set(CONSTANTS)
     if undefined:
         raise ValueError(f"Parametros no definidos: {', '.join(undefined)}")
 
-    _shunting_yard = shunting_yard(tokens)
+    _shunting_yard = shunting_yard(tokens).tokens
 
     return name, params, _shunting_yard
 
 
-def shunting_yard(tokens):
-    output, ops = deque(), []
-    arg_count_stack = []
-
-    for t_name, token in tokens:
-        if t_name in {'float', 'int'}:
-            output.append(float(token))
-        elif t_name == 'ident':
-            output.append(token)
-        elif t_name == 'function_call':
-            func_name = token[:-1]
-            if func_name in FUNCTIONS or func_name in func_defs:
-                ops.append(func_name)
-                arg_count_stack.append(0)
-                ops.append('(')
-            else:
-                print([*func_defs.keys()])
-                raise ValueError(f"Token desconocido: {func_name}")
-        elif token == ',':
-            while ops and ops[-1] != '(':
-                output.append(ops.pop())
-            if arg_count_stack:
-                arg_count_stack[-1] += 1
-        elif token in OPERATORS:
-            if (not output or output[-1] in OPERATORS or output[-1] in {'(', ')'}) and token == '-':
-                token = 'neg'
-            while (ops and ops[-1] in OPERATORS and
-                    ((OPERATORS[token][1] == 'L' and OPERATORS[token][0] <= OPERATORS[ops[-1]][0]) or
-                     (OPERATORS[token][1] == 'R' and OPERATORS[token][0] < OPERATORS[ops[-1]][0]))):
-                output.append(ops.pop())
-            ops.append(token)
-        elif token == '(':
-            ops.append(token)
-        elif token == ')':
-            while ops and ops[-1] != '(':
-                output.append(ops.pop())
-            ops.pop()
-            if ops and ops[-1] not in OPERATORS and ops[-1] not in {'(', ')'}:
-                func = ops.pop()
-                arg_count = arg_count_stack.pop() + 1
-                output.append((func, arg_count))
-
-    while ops:
-        output.append(ops.pop())
-
-    return output
-
-
-def evaluate_postfix(postfix, vars):
-    stack = []
-    while postfix:
-        token = postfix.popleft()
-        if isinstance(token, float):
-            stack.append(token)
-        elif isinstance(token, tuple):
-            func_name, arg_count = token
-            args = [stack.pop() for _ in range(arg_count)]
-            if func_name in func_defs:
-                stack.append(evaluate_function(
-                    func_defs[func_name], args[::-1]))
-            else:
-                stack.append(FUNCTIONS[func_name](*args[::-1]))
-        elif token in vars:
-            stack.append(vars[token])
-        elif token in CONSTANTS:
-            stack.append(CONSTANTS[token])
-        elif token in OPERATORS:
-            if len(stack) < 2 and token != 'neg':
-                raise ValueError(
-                    f"Error: no hay suficientes operandos para el operador '{token}'")
-            b = stack.pop()
-            a = stack.pop() if token != 'neg' else 0
-            stack.append(OPERATORS[token][2](a, b))
-        else:
-            raise ValueError(f"Token desconocido: {token}")
-
-    return stack[0]
-
 
 def pre_process_expression(expression):
     matches = re.finditer(
-        r'(?P<float>\d+\.\d+)|(?P<int>\d+)|(?P<function_call>\w+\()|(?P<LPAR>\()|(?P<RPAR>\))|(?P<ident>\w+)|(?P<symbol>[+\-*/^])|(?P<args_separator>,)|(?:\s*)',
+        PATTERN,
         expression
     )
 
     tokens = [
-        (token.lastgroup, token.group())
+        (TOKENS_TYPES(token.lastgroup), token.group())
         for token in matches
         if token.lastgroup is not None
+    ]
+
+    tokens = [
+        (t_type, t_value[:-1])
+        if t_type == TOKENS_TYPES.FUNCTION_CALL
+        else (t_type, t_value)
+        for (t_type, t_value)
+        in tokens
     ]
     return tokens
 
 
-def full_evaluate_expression(expression, vars):
-
-    tokens = pre_process_expression(expression)
-    _shunting_yard = shunting_yard(tokens)
-
-    return evaluate_postfix(_shunting_yard, vars)
-
-
 def evaluate_expression(expression, vars):
 
-    return evaluate_postfix(expression, vars)
+    tokens = pre_process_expression(expression)
+    _shunting_yard = shunting_yard(tokens).tokens
 
-
-def evaluate_function(func, args):
-    params, body = func
-    if len(params) != len(args):
-        raise ValueError("Numero incorrecto de argumentos")
-    return evaluate_expression(body, dict(zip(params, args)))
+    return evaluate_postfix(_shunting_yard, vars)
 
 
 def log_interaction(log_file, interaction):
@@ -189,44 +88,42 @@ def log_interaction(log_file, interaction):
         f.write(interaction + '\n')
 
 
-func_defs = {}
+def handle_define(function_name_def):
+    function_name_name, function_name_params, function_name_body = parse_function_definition(function_name_def)
 
-
-def handle_define(func_def):
     try:
-        func_name, func_params, func_body = parse_function_definition(func_def)
-        func_defs[func_name] = (func_params, func_body)
-        print(f"Funcion '{func_name}' definida exitosamente.")
-        return f"Funcion '{func_name}' definida exitosamente."
+        USERS_FUNCTIONS[function_name_name] = dict(
+            function_name_params=function_name_params,
+            function_name_body=function_name_body,
+            function_name_def=function_name_def
+        )
+        print(f"function_nameión '{function_name_name}' definida exitosamente.")
     except ValueError as e:
-        return f"Error: {e}"
+        print(f"Error al definir la function_nameión '{function_name_name}': {e}")
 
 
 def handle_evaluate(expression):
     try:
-        result = full_evaluate_expression(expression, {})
+        result = evaluate_expression(expression, {})
         print(result)
         return result
     except (ValueError, ZeroDivisionError) as e:
         return f"Error: {e}"
 
 
-def handle_list(func_defs):
-    if func_defs:
-        return "Funciones definidas:\n" + "\n".join(f"{name}({', '.join(params)}) = {body}" for name, (params, body) in func_defs.items())
+def handle_list(function_name_defs):
+    if function_name_defs:
+        return "function_nameiones definidas:\n" + "\n".join(f"{name}({', '.join(params)}) = {body}" for name, (params, body) in function_name_defs.items())
     else:
-        return "Aun no hay funciones definidas."
+        return "Aun no hay function_nameiones definidas."
 
 
-def _handle_gen(args):
-    func_name = args[0]
-    args = args[1]
-    #print(f"Generando grafico de {func_name} con parametros {args}")
-    load_database()
+def save_database():
+    print("Guardando base de datos")
+    print(f"Funciones definidas: {[*USERS_FUNCTIONS.keys()]}")
 
-    func_desciption = func_defs[func_name]
-
-    return evaluate_function(func_desciption, args)
+    with open(f'.save_functions.txt', mode='wb') as f:
+        pickle.dump(USERS_FUNCTIONS, f)
 
 
 def handle_config():
@@ -250,31 +147,52 @@ def handle_config():
         polar = False
 
 
-
-def save_database():
-    with open(f'.save_functions.txt', mode='wb') as f:
-        pickle.dump(func_defs, f)
-
-
 def load_database():
-    global func_defs
+    global function_name_defs
     with open(f'.save_functions.txt', mode='rb') as f:
-        func_defs = pickle.load(f)
+        function_name_defs = pickle.load(f)
 
-import os
-def handle_gen(func, *args):
+
+def _handle_gen(func_name, args):
+    print(args)
+    #config_args = args[0]
+    #args = [*args[1:]]
+    func_description = USERS_FUNCTIONS[func_name]
+    return [*args, evaluate_function(func_description, args)]
+
+
+def handle_gen(function_name, *args):
+
+
     if os.path.exists('figure.png'):
         # Si el archivo existe, eliminarlo
         os.remove('figure.png')
+
+
     if os.path.exists('figure.gif'):
         # Si el archivo existe, eliminarlo
         os.remove('figure.gif')
+
+
     save_database()
 
-    (args, _) = func_defs[func]
+
+    function_description = USERS_FUNCTIONS[function_name]
+    params_definition = function_description['func_params']
+    body = function_description['func_body']
+    function_name_def = function_description['func_def']
+
+    print(function_description)
+    print("lol" , params_definition)
+    print("body",body)
+    print("run",function_name_def)
+    print(_handle_gen(function_name,params_definition))
+
     params = []
-    rangos = [rango_x,rango_y, rango_z]
-    for i in range(len(args)):
+    rangos = [rango_x, rango_y, rango_z]
+
+
+    for i in range(len(params_definition)):
         params.append(
             list(
                 np.arange(
@@ -284,19 +202,24 @@ def handle_gen(func, *args):
                 )
             )
         )
-    if len(args) == 1:
+    
+    print(params)
+
+    if len(params_definition) == 1:
         params_1 = params[0]
 
         result = []
+
         with Pool(core) as p:
             result = p.map(
                 _handle_gen,
-                [
-                    (func, [param_1])
-                    for param_1 in params_1
-                ]
+                product([(function_name, args)], *params)
             )
+
+        print(result)
+
         x,y=np.array(params_1), np.array(result)
+
         if(polar):
             x,y=y*np.cos(x),y*np.sin(x)
         result = list(zip(params_1, result))
@@ -311,6 +234,8 @@ def handle_gen(func, *args):
         fig.savefig("figure.png")
         print("guarde el grafico correctamente")
         plt.show()
+
+
     elif len(args) == 2:
         print('LLegue')
         x , y = params
@@ -323,7 +248,7 @@ def handle_gen(func, *args):
             result = p.map(
                 _handle_gen,
                 [
-                    (func, param_1)
+                    (function_name, param_1)
                     for param_1 in params_1
                 ]
             )
@@ -384,7 +309,7 @@ def handle_gen(func, *args):
                 ax.set_ylabel('Y')
                 ax.set_title(f'Time: {frame:.2f}')
             fig, ax = plt.subplots()
-            ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
+            ani = function_nameAnimation(fig, update, frames=len(datos), repeat=True)
             ani.save('figure.gif', writer=PillowWriter(fps=20))
             print('guarde la animacion correctamente')
             plt.show()
@@ -400,7 +325,7 @@ def handle_gen(func, *args):
             result = p.map(
                 _handle_gen,
                 [
-                    (func, param_1)
+                    (function_name, param_1)
                     for param_1 in params_1
                 ]
             )
@@ -446,7 +371,7 @@ def handle_gen(func, *args):
             plt.show()
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
+        ani = function_nameAnimation(fig, update, frames=len(datos), repeat=True)
         ani.save('figure.gif', writer=PillowWriter(fps=20))
         print('guarde la animacion correctamente')
         plt.show()
@@ -455,3 +380,5 @@ def handle_gen(func, *args):
 
 def test__handle_gen():
     _handle_gen('f', 1)
+
+handle_gen("f")

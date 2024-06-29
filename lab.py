@@ -1,3 +1,4 @@
+from constants import *
 import numpy as np
 import pickle
 
@@ -34,4 +35,4 @@ def handle_config():
     print(polar)
     print(rango_x)
 
-handle_config()
+#handle_config()

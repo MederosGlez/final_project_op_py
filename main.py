@@ -1,3 +1,5 @@
+from constants import *
+
 import streamlit as st
 from display import display
 from settings import settings

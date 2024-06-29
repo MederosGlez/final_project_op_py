@@ -2,3 +2,4 @@ cuadrado(x)= x*x
 f(x,t)= sin(5*x+t)+t
 g(x,y)=sin(x*y)
 h(x,y,t)=sin(x*y)+t
+k(x)=x+6

@@ -1,3 +1,5 @@
+from constants import *
+
 import streamlit as st
 import pickle
 from tools import handle_config
@@ -67,6 +69,7 @@ def get_settings():
         #     'finish': t_range_finish,
         #     'step': t_range_step
         # },
+        
         'core': int(core),
         'consal': type_choice,
         'kind': kind_choice,
