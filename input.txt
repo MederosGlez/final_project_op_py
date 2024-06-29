@@ -1,5 +1,2 @@
-cuadrado(x)= x*x
-f(x,t)= sin(5*x+t)+t
-g(x,y)=sin(x*y)
-h(x,y,t)=sin(x*y)+t
-k(x)=x+6
+olas(x,y,t)=sin(sqrt(x*x+y*y)+t)
+uwu(x,t)=x^(2/3)+0.9*sqrt(3.3-x*x) * sin(t*3.14*x)

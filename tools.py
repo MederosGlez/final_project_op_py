@@ -1,25 +1,19 @@
-from constants import *
-from rpn_notation import evaluate_function, evaluate_postfix, shunting_yard
-
-
-import numpy as np
-from matplotlib import pyplot as plt
-import matplotlib.animation
-from scipy.interpolate import griddata
-from mpl_toolkits.mplot3d import Axes3D
-
+import pickle
+from multiprocessing import Pool
 import re
 import operator
 import math
 from collections import deque
-import os
-
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import pyplot as plt
+import numpy as np
+from scipy.interpolate import griddata
+from matplotlib.animation import FuncAnimation, PillowWriter
 from collections import OrderedDict
-from multiprocessing import Pool
-import pickle
+from rpn_notation import evaluate_function, evaluate_postfix, shunting_yard
+from const import *
 
-
-rango_x = [0, np.pi, 0.05]
+rango_x = [0, 10, 1]
 rango_y = [0, np.pi, 0.05]
 rango_z = [0,1,0.1]
 core = 5
@@ -27,15 +21,13 @@ condimento = "spatial"
 kind = "plot"
 polar = False
 
+# Diccionario de operadores con su precedencia, asociatividad y funcion correspondiente
 
-function_name_defs = {}
-
-
-def parse_function_definition(function_name_def):
+def parse_function_definition(func_def):
     match = re.match(
-        r'^\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*=\s*(.+)\s*$', function_name_def)
+        r'^\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*=\s*(.+)\s*$', func_def)
     if not match:
-        raise ValueError("Definicion de function_nameion invalida")
+        raise ValueError("Definicion de funcion invalida")
     name, params, body = match.groups()
     params = [p.strip() for p in params.split(',')] if params else []
 
@@ -50,7 +42,6 @@ def parse_function_definition(function_name_def):
     _shunting_yard = shunting_yard(tokens).tokens
 
     return name, params, _shunting_yard
-
 
 
 def pre_process_expression(expression):
@@ -88,35 +79,11 @@ def log_interaction(log_file, interaction):
         f.write(interaction + '\n')
 
 
-def handle_define(function_name_def):
-    function_name_name, function_name_params, function_name_body = parse_function_definition(function_name_def)
-
-    try:
-        USERS_FUNCTIONS[function_name_name] = dict(
-            function_name_params=function_name_params,
-            function_name_body=function_name_body,
-            function_name_def=function_name_def
-        )
-        print(f"function_nameión '{function_name_name}' definida exitosamente.")
-    except ValueError as e:
-        print(f"Error al definir la function_nameión '{function_name_name}': {e}")
-
-
-def handle_evaluate(expression):
-    try:
-        result = evaluate_expression(expression, {})
-        print(result)
-        return result
-    except (ValueError, ZeroDivisionError) as e:
-        return f"Error: {e}"
-
-
-def handle_list(function_name_defs):
-    if function_name_defs:
-        return "function_nameiones definidas:\n" + "\n".join(f"{name}({', '.join(params)}) = {body}" for name, (params, body) in function_name_defs.items())
-    else:
-        return "Aun no hay function_nameiones definidas."
-
+def _handle_gen(args):
+    func_name = args[0]
+    args = args[1]
+    func_description = USERS_FUNCTIONS[func_name]
+    return evaluate_function(func_description, args)
 
 def save_database():
     print("Guardando base de datos")
@@ -124,6 +91,36 @@ def save_database():
 
     with open(f'.save_functions.txt', mode='wb') as f:
         pickle.dump(USERS_FUNCTIONS, f)
+
+
+
+def handle_define(func_def):
+
+    func_name, func_params, func_body = parse_function_definition(func_def)
+
+    try:
+        USERS_FUNCTIONS[func_name] = dict(
+            func_params=func_params,
+            func_body=func_body,
+            func_def=func_def
+        )
+        print(f"Función '{func_name}' definida exitosamente.")
+    except ValueError as e:
+        print(f"Error al definir la función '{func_name}': {e}")
+
+
+def handle_evaluate(expression):
+    try:
+        return evaluate_expression(expression, {})
+    except (ValueError, ZeroDivisionError) as e:
+        return f"Error: {e}"
+
+
+def handle_list(func_defs):
+    if func_defs:
+        return "Funciones definidas:\n" + "\n".join(f"{name}({', '.join(params)}) = {body}" for name, (params, body) in func_defs.items())
+    else:
+        return "Aun no hay funciones definidas."
 
 
 def handle_config():
@@ -147,51 +144,23 @@ def handle_config():
         polar = False
 
 
-def load_database():
-    global function_name_defs
-    with open(f'.save_functions.txt', mode='rb') as f:
-        function_name_defs = pickle.load(f)
-
-
-def _handle_gen(func_name, args):
-    print(args)
-    #config_args = args[0]
-    #args = [*args[1:]]
-    func_description = USERS_FUNCTIONS[func_name]
-    return [*args, evaluate_function(func_description, args)]
-
-
-def handle_gen(function_name, *args):
-
-
+import os
+def handle_gen(function_name):
     if os.path.exists('figure.png'):
         # Si el archivo existe, eliminarlo
         os.remove('figure.png')
-
-
     if os.path.exists('figure.gif'):
         # Si el archivo existe, eliminarlo
         os.remove('figure.gif')
-
-
     save_database()
-
 
     function_description = USERS_FUNCTIONS[function_name]
     params_definition = function_description['func_params']
     body = function_description['func_body']
-    function_name_def = function_description['func_def']
-
-    print(function_description)
-    print("lol" , params_definition)
-    print("body",body)
-    print("run",function_name_def)
-    print(_handle_gen(function_name,params_definition))
+    func_def = function_description['func_def']
 
     params = []
-    rangos = [rango_x, rango_y, rango_z]
-
-
+    rangos = [rango_x,rango_y, rango_z]
     for i in range(len(params_definition)):
         params.append(
             list(
@@ -203,23 +172,18 @@ def handle_gen(function_name, *args):
             )
         )
     
-    print(params)
-
     if len(params_definition) == 1:
         params_1 = params[0]
-
         result = []
-
         with Pool(core) as p:
             result = p.map(
                 _handle_gen,
-                product([(function_name, args)], *params)
+                [
+                    (function_name, [param_1])
+                    for param_1 in params_1
+                ]
             )
-
-        print(result)
-
         x,y=np.array(params_1), np.array(result)
-
         if(polar):
             x,y=y*np.cos(x),y*np.sin(x)
         result = list(zip(params_1, result))
@@ -234,10 +198,7 @@ def handle_gen(function_name, *args):
         fig.savefig("figure.png")
         print("guarde el grafico correctamente")
         plt.show()
-
-
-    elif len(args) == 2:
-        print('LLegue')
+    elif len(params_definition) == 2:
         x , y = params
         params_1=[]
         for i in x:
@@ -309,11 +270,11 @@ def handle_gen(function_name, *args):
                 ax.set_ylabel('Y')
                 ax.set_title(f'Time: {frame:.2f}')
             fig, ax = plt.subplots()
-            ani = function_nameAnimation(fig, update, frames=len(datos), repeat=True)
+            ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
             ani.save('figure.gif', writer=PillowWriter(fps=20))
             print('guarde la animacion correctamente')
             plt.show()
-    elif len(args)==3:
+    elif len(params_definition)==3:
         x , y, z = params
         params_1=[]
         for i in x:
@@ -371,7 +332,7 @@ def handle_gen(function_name, *args):
             plt.show()
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
-        ani = function_nameAnimation(fig, update, frames=len(datos), repeat=True)
+        ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
         ani.save('figure.gif', writer=PillowWriter(fps=20))
         print('guarde la animacion correctamente')
         plt.show()
@@ -380,5 +341,3 @@ def handle_gen(function_name, *args):
 
 def test__handle_gen():
     _handle_gen('f', 1)
-
-handle_gen("f")
