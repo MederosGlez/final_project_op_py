@@ -1,5 +1,5 @@
 import streamlit as st
-from tools import handle_define, handle_evaluate, handle_gen, handle_load
+from tools import handle_define, handle_evaluate, handle_gen, handle_load, handle_save_all
 from constants import *
 
 
@@ -7,7 +7,8 @@ buildin_functions = {
     "gen": handle_gen,
     "load": handle_load,
     "evaluate": handle_evaluate,
-    "save": handle_define
+    "save": handle_define,
+    "save_all": handle_save_all
 }
 
 
@@ -40,6 +41,8 @@ def display():
             if st.button(_name):
                 mensajito = buildin_functions[_fun](tmp)
                 
+    if st.button("Save all"):
+        handle_save_all()
 
     if mensajito:
         st.success(mensajito)

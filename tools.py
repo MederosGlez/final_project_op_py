@@ -116,12 +116,21 @@ def handle_evaluate(expression):
         return f"Error: {e}"
 
 
-def handle_list(func_defs):
+def handle_save_all():
+    func_defs= USERS_FUNCTIONS
     if func_defs:
-        return "Funciones definidas:\n" + "\n".join(f"{name}({', '.join(params)}) = {body}" for name, (params, body) in func_defs.items())
+        try:
+            with open("save_def_func.txt", 'w') as f:
+                for key in func_defs.keys():
+                    algo = func_defs[key]["func_def"]
+                    f.write(f"{algo}\n")
+            return f"Se han guardado los datos."
+        except IOError:
+            return "Error al escribir en el archivo."
     else:
         return "Aun no hay funciones definidas."
 
+ #"Funciones definidas:\n" + "\n".join(f"{name}({', '.join(params)}) = {body}" for name, (params, body) in func_defs.items())
 
 def handle_config():
 
