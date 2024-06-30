@@ -34,4 +34,4 @@ def handle_config():
     print(polar)
     print(rango_x)
 
-handle_config()
+#handle_config()

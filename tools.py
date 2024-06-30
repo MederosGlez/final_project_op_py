@@ -11,7 +11,7 @@ from scipy.interpolate import griddata
 from matplotlib.animation import FuncAnimation, PillowWriter
 from collections import OrderedDict
 from rpn_notation import evaluate_function, evaluate_postfix, shunting_yard
-from const import *
+from constants import *
 
 rango_x = [0, 10, 1]
 rango_y = [0, np.pi, 0.05]

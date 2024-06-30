@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from multiprocessing import Pool
 import os
-
+from constants import *
 
 def handle_load(path, *args):
     print(path)
@@ -42,11 +42,14 @@ def process_line(line):
 
     elif "=" in line:
         handle_define(line)
+    
+    elif line == "/exit":
+        exit()
     else:
         return handle_evaluate(line)
 
 def display():
-    st.title("Funtions app(Maia soy malo con los nombres, te toca arreglar todo esto)")
+    st.title("Welcome user")
     def new_line():
         st.session_state.submitted_texts.append(text_input)
     # Inicializar la lista de textos enviados si no existe en session_state
@@ -81,5 +84,3 @@ def display():
     if os.path.exists('figure.gif'):
         # Si el archivo existe, eliminarlo
         st.image("figure.gif", use_column_width=True)
-    
-
