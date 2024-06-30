@@ -23,7 +23,29 @@ condimento = "spatial"
 kind = "plot"
 polar = False
 
-# Diccionario de operadores con su precedencia, asociatividad y funcion correspondiente
+def remove_outliers(dataset):
+    # Convertir lista de listas a arrays de numpy
+    dataset_np = np.array(dataset)
+    
+    # Obtener la última variable (z en este caso)
+    z = dataset_np[-1]
+    
+    # Calcular el rango intercuartílico (IQR) para z
+    q1 = np.percentile(z, 25)
+    q3 = np.percentile(z, 75)
+    iqr = q3 - q1
+    
+    # Definir los límites inferior y superior para detectar outliers
+    lower_bound = q1 - 2 * iqr
+    upper_bound = q3 + 2 * iqr
+    
+    # Identificar índices de puntos que no son outliers
+    non_outlier_indices = (z >= lower_bound) & (z <= upper_bound)
+    
+    # Filtrar los puntos que no son outliers
+    filtered_dataset = [col[non_outlier_indices].tolist() for col in dataset_np]
+    
+    return filtered_dataset
 
 def parse_function_definition(func_def):
     match = re.match(r'^\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*=\s*(.+)\s*$', func_def)
@@ -84,8 +106,10 @@ def _handle_gen(args):
     func_name = args[0]
     args = args[1]
     func_description = USERS_FUNCTIONS[func_name]
-    return evaluate_function(func_description, args)
-
+    try:
+        return evaluate_function(func_description, args)
+    except:
+        return 10**200
 def save_database():
     print("Guardando base de datos")
     print(f"Funciones definidas: {[*USERS_FUNCTIONS.keys()]}")
@@ -214,6 +238,10 @@ def handle_gen(function_name):
     if len(params_definition) == 1:
         params_1 = [param_1[0] for param_1 in params_1]
         x,y=np.array(params_1), np.array(result)
+        try:
+            x,y = remove_outliers([x,y])
+        except:
+            return "Hay demasiadas indeterminaciones"
         if(polar):
             x,y=y*np.cos(x),y*np.sin(x)
         fig, ax = plt.subplots()
@@ -240,7 +268,11 @@ def handle_gen(function_name):
         x = [u[0] for u in params_1]
         y = [u[1] for u in params_1]
         z = result
-
+        try:
+            x,y,z = remove_outliers([x,y,z])
+        except:
+            return "Hay demasiadas indeterminaciones"
+        
         if condimento == "spatial":
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
@@ -313,7 +345,10 @@ def handle_gen(function_name):
         y = [u[1] for u in params_1]
         z = [u[2] for u in params_1]
         _z = result
-
+        try:
+            x,y,z,_z=remove_outliers([x,y,z,_z])
+        except:
+            return "Hay demasiadas indeterminaciones"
         z,y,x,t=_z,y,x,z 
         
         mapa = OrderedDict()
