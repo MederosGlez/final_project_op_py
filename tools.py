@@ -13,6 +13,7 @@ from collections import OrderedDict
 from rpn_notation import evaluate_function, evaluate_postfix, shunting_yard
 from constants import *
 import os
+import itertools
 
 rango_x = [0, 10, 1]
 rango_y = [0, np.pi, 0.05]
@@ -167,6 +168,8 @@ def handle_load(path, *args):
             return retorno
     except FileNotFoundError as e: 
         assert False, f"FileNotFoundError: {e}"
+
+
 def handle_gen(function_name):
     if os.path.exists('figure.png'):
         # Si el archivo existe, eliminarlo
@@ -174,6 +177,8 @@ def handle_gen(function_name):
     if os.path.exists('figure.gif'):
         # Si el archivo existe, eliminarlo
         os.remove('figure.gif')
+
+        
     save_database()
 
     assert function_name in USERS_FUNCTIONS, f"Error: La función '{function_name}' no está guardada."
@@ -181,8 +186,10 @@ def handle_gen(function_name):
     params_definition = function_description['func_params']
     body = function_description['func_body']
     func_def = function_description['func_def']
+
     params = []
     rangos = [rango_x,rango_y, rango_z]
+
     for i in range(len(params_definition)):
         params.append(
             list(
@@ -205,11 +212,19 @@ def handle_gen(function_name):
                     for param_1 in params_1
                 ]
             )
+            
         x,y=np.array(params_1), np.array(result)
         if(polar):
             x,y=y*np.cos(x),y*np.sin(x)
-        result = list(zip(params_1, result))
         fig, ax = plt.subplots()
+        
+
+         # Título y etiquetas
+        ax.set_title(func_def)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+
+
         # Plot some data on the Axes.
         if kind == "plot":
             ax.plot(x, y)
@@ -219,12 +234,12 @@ def handle_gen(function_name):
             return "Introduce una opcion correcta"
         fig.savefig("figure.png")
         return "Se ha generado el grafico correctamente"
+
+
     elif len(params_definition) == 2:
         x , y = params
-        params_1=[]
-        for i in x:
-            for j in y:
-                params_1.append([i,j])
+        params_1=list(itertools.product(x,y))
+
         result = []
         with Pool(core) as p:
             result = p.map(
@@ -237,6 +252,7 @@ def handle_gen(function_name):
         x = [u[0] for u in params_1]
         y = [u[1] for u in params_1]
         z = result
+
         if condimento == "spatial":
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
@@ -247,21 +263,30 @@ def handle_gen(function_name):
                 zi = griddata((x, y), z, (xi, yi), method='cubic')
                 ax.plot_surface(xi, yi, zi, cmap='viridis')
             elif kind == "scatter":
-                ax.scatter(x, y,z)
+                ax.scatter(x,y,z)
             else:
                 return "Introduce una opcion correcta"
+
+
+            ax.set_title(func_def)
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
+
+
             fig.savefig("figure.png")
             return "Se ha generado el grafico correctamente"
+
+
         elif condimento == "temporal":
-            print("temporal")
             y,x,t=z,x,y 
             x,y=np.array(x), np.array(y)
             if(polar):
                 x,y=y*np.cos(x),y*np.sin(x)
+
+            #dicionario para guardar los frames (ordenar los instantes de tiempo)    
             mapa = OrderedDict()
+
             # Iterar sobre los datos x, y, t
             for _x, _y, _t in zip(x, y, t):
                 if _t not in mapa:
@@ -271,7 +296,6 @@ def handle_gen(function_name):
             datos = []
             for i in mapa.values():
                 datos.append(i)
-            # Mostrar el resultado
             
             def update(frame):
                 ax.clear()
@@ -283,15 +307,19 @@ def handle_gen(function_name):
                     ax.scatter(datox, datoy)
                 else:
                     print("Introduce una opcion correcta")
+
                 ax.set_xlim(min(x), max(x))
                 ax.set_ylim(min(y), max(y))
                 ax.set_xlabel('X')
                 ax.set_ylabel('Y')
-                ax.set_title(f'Time: {frame:.2f}')
+                ax.set_title(func_def)
+        
             fig, ax = plt.subplots()
             ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
             ani.save('figure.gif', writer=PillowWriter(fps=20))
             return "Se ha generado el grafico correctamente"
+
+
     elif len(params_definition)==3:
         x , y, z = params
         params_1=[]
@@ -299,7 +327,9 @@ def handle_gen(function_name):
             for j in y:
                 for k in z:
                     params_1.append([i,j,k])
+
         result = []
+
         with Pool(core) as p:
             result = p.map(
                 _handle_gen,
@@ -308,10 +338,13 @@ def handle_gen(function_name):
                     for param_1 in params_1
                 ]
             )
+
+
         x = [u[0] for u in params_1]
         y = [u[1] for u in params_1]
         z = [u[2] for u in params_1]
         _z = result
+
         z,y,x,t=_z,y,x,z 
         
         mapa = OrderedDict()
@@ -355,6 +388,3 @@ def handle_gen(function_name):
         return "Se ha generado el grafico correctamente"
     else:
         return "No podemos graficar esa funcion"
-
-def test__handle_gen():
-    _handle_gen('f', 1)

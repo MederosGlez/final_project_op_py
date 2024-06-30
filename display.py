@@ -19,7 +19,7 @@ def handle_buildin_function(tokens):
     result = fun(*tokens[1:])
     return result
 
-coso = [
+options = [
     ["load","Load"],
     ["evaluate","Evaluate"],
     ["gen","Generate"],
@@ -32,8 +32,8 @@ def display():
     # Text boxes for user input
     mensajito=""
     ok = False
-    for _fun , _name in coso:
-        col1, col2 = st.columns(2)
+    for _fun , _name in options:
+        col1, col2 = st.columns([3,1])
         with col1:
             tmp = st.text_input(f"{_name}")
         with col2:
@@ -46,6 +46,10 @@ def display():
                 except AssertionError as err:
                     ok = False
                     mensajito = err
+
+
+    if st.button("Save all"):
+        handle_save_all()
 
     if mensajito:
         if ok:

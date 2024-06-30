@@ -5,7 +5,6 @@ from constants import *
 import sys
 
 def main():
-     # Configurar el tema de la página en light
     def Display():
         display()
     def Settings():
