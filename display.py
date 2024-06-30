@@ -19,9 +19,9 @@ def handle_buildin_function(tokens):
     return result
 
 coso = [
-    ["gen","Generate"],
     ["load","Load"],
     ["evaluate","Evaluate"],
+     ["gen","Generate"],
     ["save","Save"]
 ]
 

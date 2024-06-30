@@ -12,9 +12,6 @@ def main():
         settings()
     st.sidebar.title('Menu')
     page=st.sidebar.selectbox('selecciona',['Display','Settings'])
-    
-    if st.button("Exit"):
-        sys.exit()
 
     if page=='Display':
         Display()
