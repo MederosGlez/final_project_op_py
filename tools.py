@@ -200,19 +200,19 @@ def handle_gen(function_name):
                 )
             )
         )
-    
+    params_1=[list(p) for p in list(itertools.product(*params))]
+    result = []
+    with Pool(core) as p:
+        result = p.map(
+            _handle_gen,
+            [
+                (function_name, param_1)
+                for param_1 in params_1
+            ]
+        )
+
     if len(params_definition) == 1:
-        params_1 = params[0]
-        result = []
-        with Pool(core) as p:
-            result = p.map(
-                _handle_gen,
-                [
-                    (function_name, [param_1])
-                    for param_1 in params_1
-                ]
-            )
-            
+        params_1 = [param_1[0] for param_1 in params_1]
         x,y=np.array(params_1), np.array(result)
         if(polar):
             x,y=y*np.cos(x),y*np.sin(x)
@@ -237,18 +237,6 @@ def handle_gen(function_name):
 
 
     elif len(params_definition) == 2:
-        x , y = params
-        params_1=list(itertools.product(x,y))
-
-        result = []
-        with Pool(core) as p:
-            result = p.map(
-                _handle_gen,
-                [
-                    (function_name, param_1)
-                    for param_1 in params_1
-                ]
-            )
         x = [u[0] for u in params_1]
         y = [u[1] for u in params_1]
         z = result
@@ -321,25 +309,6 @@ def handle_gen(function_name):
 
 
     elif len(params_definition)==3:
-        x , y, z = params
-        params_1=[]
-        for i in x:
-            for j in y:
-                for k in z:
-                    params_1.append([i,j,k])
-
-        result = []
-
-        with Pool(core) as p:
-            result = p.map(
-                _handle_gen,
-                [
-                    (function_name, param_1)
-                    for param_1 in params_1
-                ]
-            )
-
-
         x = [u[0] for u in params_1]
         y = [u[1] for u in params_1]
         z = [u[2] for u in params_1]
@@ -379,7 +348,7 @@ def handle_gen(function_name):
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
-            ax.set_title(f'Time: {frame:.2f}')
+            ax.set_title(func_def)
             plt.show()
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
