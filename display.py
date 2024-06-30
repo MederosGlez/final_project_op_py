@@ -1,4 +1,5 @@
 import streamlit as st
+import sys
 
 import multiprocessing
 import re
@@ -42,9 +43,6 @@ def process_line(line):
 
     elif "=" in line:
         handle_define(line)
-    
-    elif line == "/exit":
-        exit()
     else:
         return handle_evaluate(line)
 
@@ -84,3 +82,4 @@ def display():
     if os.path.exists('figure.gif'):
         # Si el archivo existe, eliminarlo
         st.image("figure.gif", use_column_width=True)
+    
