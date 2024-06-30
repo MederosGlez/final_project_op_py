@@ -155,12 +155,14 @@ def handle_config():
 def handle_load(path, *args):
     try:
         with open(file=path) as file:
+            retorno = ""
             for ix, line in enumerate(file.readlines()):
                 if "=" in line:
-                    handle_define(line)
+                    retorno+=f'{handle_define(line)}\n'
                 else:
                     result = handle_evaluate(line)
-                    print(f'line{ix}:{result}')
+                    retorno+=f'line{ix}:{result}\n'
+                return retorno
     except FileNotFoundError as e: 
         assert False, f"FileNotFoundError: {e}"
 def handle_gen(function_name):
@@ -177,7 +179,6 @@ def handle_gen(function_name):
     params_definition = function_description['func_params']
     body = function_description['func_body']
     func_def = function_description['func_def']
-
     params = []
     rangos = [rango_x,rango_y, rango_z]
     for i in range(len(params_definition)):

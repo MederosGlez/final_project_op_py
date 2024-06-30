@@ -22,7 +22,7 @@ def handle_buildin_function(tokens):
 coso = [
     ["load","Load"],
     ["evaluate","Evaluate"],
-     ["gen","Generate"],
+    ["gen","Generate"],
     ["save","Save"]
 ]
 
@@ -31,6 +31,7 @@ def display():
 
     # Text boxes for user input
     mensajito=""
+    ok = False
     for _fun , _name in coso:
         col1, col2 = st.columns(2)
         with col1:
@@ -39,15 +40,20 @@ def display():
             st.write("\n")
             st.write("\n")
             if st.button(_name):
-                mensajito = buildin_functions[_fun](tmp)
-                
-    if st.button("Save all"):
-        handle_save_all()
+                try:
+                    mensajito = buildin_functions[_fun](tmp)
+                    ok = True
+                except AssertionError as err:
+                    ok = False
+                    mensajito = err
 
     if mensajito:
-        st.success(mensajito)
+        if ok:
+            st.success(mensajito)
+        else:
+            st.warning(mensajito)
     else:
-        st.warning("Failed to load data. Please check your data loading logic.")
+        st.warning("Escriba algo! no sea timido")
 
     if os.path.exists('figure.png'):
         # Si el archivo existe, eliminarlo
