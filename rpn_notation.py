@@ -1,4 +1,4 @@
-from const import *
+from constants import *
 
 
 class RPN_Notation:

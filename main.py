@@ -1,7 +1,7 @@
 import streamlit as st
 from display import display
 from settings import settings
-from const import *
+from constants import *
 
 def main():
      # Configurar el tema de la página en light
