@@ -12,6 +12,7 @@ from matplotlib.animation import FuncAnimation, PillowWriter
 from collections import OrderedDict
 from rpn_notation import evaluate_function, evaluate_postfix, shunting_yard
 from constants import *
+import os
 
 rango_x = [0, 10, 1]
 rango_y = [0, np.pi, 0.05]
@@ -24,20 +25,17 @@ polar = False
 # Diccionario de operadores con su precedencia, asociatividad y funcion correspondiente
 
 def parse_function_definition(func_def):
-    match = re.match(
-        r'^\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*=\s*(.+)\s*$', func_def)
-    if not match:
-        raise ValueError("Definicion de funcion invalida")
+    match = re.match(r'^\s*([a-zA-Z_]\w*)\s*\(([^)]*)\)\s*=\s*(.+)\s*$', func_def)
+    assert match, "Definicion de funcion invalida"
+
     name, params, body = match.groups()
     params = [p.strip() for p in params.split(',')] if params else []
 
     tokens = pre_process_expression(body)
     idents = {text for t_name, text in tokens if t_name == 'ident'}
 
-    undefined = idents - set(params) - set(OPERATORS) - \
-        set(BUILD_IN_FUNCTIONS) - set(CONSTANTS)
-    if undefined:
-        raise ValueError(f"Parametros no definidos: {', '.join(undefined)}")
+    undefined = idents - set(params) - set(OPERATORS) - set(BUILD_IN_FUNCTIONS) - set(CONSTANTS)
+    assert not undefined, f"Parametros no definidos: {', '.join(undefined)}"
 
     _shunting_yard = shunting_yard(tokens).tokens
 
@@ -70,8 +68,10 @@ def evaluate_expression(expression, vars):
 
     tokens = pre_process_expression(expression)
     _shunting_yard = shunting_yard(tokens).tokens
-
-    return evaluate_postfix(_shunting_yard, vars)
+    try:
+        return evaluate_postfix(_shunting_yard, vars)
+    except:
+        return "error"
 
 
 def log_interaction(log_file, interaction):
@@ -104,9 +104,9 @@ def handle_define(func_def):
             func_body=func_body,
             func_def=func_def
         )
-        print(f"Función '{func_name}' definida exitosamente.")
+        return(f"Función '{func_name}' definida exitosamente.")
     except ValueError as e:
-        print(f"Error al definir la función '{func_name}': {e}")
+        return(f"Error al definir la función '{func_name}': {e}")
 
 
 def handle_evaluate(expression):
@@ -143,8 +143,17 @@ def handle_config():
     else:
         polar = False
 
-
-import os
+def handle_load(path, *args):
+    try:
+        with open(file=path) as file:
+            for ix, line in enumerate(file.readlines()):
+                if "=" in line:
+                    handle_define(line)
+                else:
+                    result = handle_evaluate(line)
+                    print(f'line{ix}:{result}')
+    except FileNotFoundError as e: 
+        assert False, f"FileNotFoundError: {e}"
 def handle_gen(function_name):
     if os.path.exists('figure.png'):
         # Si el archivo existe, eliminarlo
@@ -154,6 +163,7 @@ def handle_gen(function_name):
         os.remove('figure.gif')
     save_database()
 
+    assert function_name in USERS_FUNCTIONS, f"Error: La función '{function_name}' no está guardada."
     function_description = USERS_FUNCTIONS[function_name]
     params_definition = function_description['func_params']
     body = function_description['func_body']
@@ -194,10 +204,9 @@ def handle_gen(function_name):
         elif kind == "scatter":
             ax.scatter(x, y)
         else:
-            print("Introduce una opcion correcta")
+            return "Introduce una opcion correcta"
         fig.savefig("figure.png")
-        print("guarde el grafico correctamente")
-        plt.show()
+        return "Se ha generado el grafico correctamente"
     elif len(params_definition) == 2:
         x , y = params
         params_1=[]
@@ -217,7 +226,6 @@ def handle_gen(function_name):
         y = [u[1] for u in params_1]
         z = result
         if condimento == "spatial":
-            print("spatial")
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
             if kind == "plot":
@@ -229,13 +237,12 @@ def handle_gen(function_name):
             elif kind == "scatter":
                 ax.scatter(x, y,z)
             else:
-                print("Introduce una opcion correcta")
+                return "Introduce una opcion correcta"
             ax.set_xlabel('X')
             ax.set_ylabel('Y')
             ax.set_zlabel('Z')
             fig.savefig("figure.png")
-            print("guarde el grafico correctamente")
-            plt.show()
+            return "Se ha generado el grafico correctamente"
         elif condimento == "temporal":
             print("temporal")
             y,x,t=z,x,y 
@@ -272,8 +279,7 @@ def handle_gen(function_name):
             fig, ax = plt.subplots()
             ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
             ani.save('figure.gif', writer=PillowWriter(fps=20))
-            print('guarde la animacion correctamente')
-            plt.show()
+            return "Se ha generado el grafico correctamente"
     elif len(params_definition)==3:
         x , y, z = params
         params_1=[]
@@ -334,10 +340,9 @@ def handle_gen(function_name):
         ax = fig.add_subplot(111, projection='3d')
         ani = FuncAnimation(fig, update, frames=len(datos), repeat=True)
         ani.save('figure.gif', writer=PillowWriter(fps=20))
-        print('guarde la animacion correctamente')
-        plt.show()
+        return "Se ha generado el grafico correctamente"
     else:
-        print('Demasiados argumentos para graficar D:')
+        return "No podemos graficar esa funcion"
 
 def test__handle_gen():
     _handle_gen('f', 1)

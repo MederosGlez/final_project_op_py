@@ -180,9 +180,15 @@ def evaluate_postfix(rpn_notation, vars):
             stack.append(token)
         elif token_type == TOKENS_TYPES.IDENT:
             if token in CONSTANTS:
-                stack.append((CONSTANTS[token]))
+                try:
+                    stack.append((CONSTANTS[token]))
+                except KeyError as e:
+                    assert False, f"Entrada invalida"
             else:
-                stack.append(vars[token])
+                try:
+                    stack.append(vars[token])
+                except KeyError as e:
+                    assert False, f"Entrada invalida"
                 
         elif token_type == TOKENS_TYPES.FUNCTION_CALL:
 
