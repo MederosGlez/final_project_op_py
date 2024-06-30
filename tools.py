@@ -157,12 +157,14 @@ def handle_load(path, *args):
         with open(file=path) as file:
             retorno = ""
             for ix, line in enumerate(file.readlines()):
+                if ix != 0:
+                    retorno += "\n"
                 if "=" in line:
-                    retorno+=f'{handle_define(line)}\n'
+                    retorno+=f'{handle_define(line)}'
                 else:
                     result = handle_evaluate(line)
-                    retorno+=f'line{ix}:{result}\n'
-                return retorno
+                    retorno+=f'line{ix}: {result}'
+            return retorno
     except FileNotFoundError as e: 
         assert False, f"FileNotFoundError: {e}"
 def handle_gen(function_name):

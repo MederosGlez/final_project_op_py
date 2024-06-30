@@ -49,7 +49,8 @@ def display():
 
     if mensajito:
         if ok:
-            st.success(mensajito)
+            for i in mensajito.split('\n'):
+                st.success(i)
         else:
             st.warning(mensajito)
     else:
