@@ -52,6 +52,7 @@ def display():
         handle_save_all()
 
     if mensajito:
+        mensajito=str(mensajito)
         if ok:
             for i in mensajito.split('\n'):
                 st.success(i)
